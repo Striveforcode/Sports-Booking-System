@@ -11,29 +11,25 @@ class Contact(models.Model):
     def __str__(self):
         return self.yourName
 
-class TurfBooking(models.Model):
-    time_slot = models.CharField(max_length=12)
-    isBooked = models.BooleanField(default=False)
-    days = models.CharField(max_length=100, blank=True)
 
+# Updated bookslot model for SQLite
+class bookslot(models.Model):
+    week = models.JSONField()  # Replacing ArrayField with JSONField
+    
     def __str__(self):
-        return self.time_slot
+        return str(self.week)
 
-class BookSlot(models.Model):
-    # Change ArrayField to TextField and use a method to handle lists
-    week = models.TextField(default="")
 
-    def get_week_list(self):
-        return self.week.split(',') if self.week else []
-
+# Updated Time model for SQLite
 class Time(models.Model):
     name = models.CharField(max_length=200, default="")
-    # Change ArrayField to TextField and use a method to handle lists
-    week = models.TextField(default="")
+    week = models.JSONField()  # Replacing ArrayField with JSONField
+    
+    def __str__(self):
+        return self.name
 
-    def get_week_list(self):
-        return self.week.split(',') if self.week else []
 
+# Updated TurfBooked model for SQLite
 class TurfBooked(models.Model):
     name = models.CharField(max_length=200)
     email = models.CharField(max_length=200)
@@ -41,11 +37,8 @@ class TurfBooked(models.Model):
     selected_date = models.CharField(max_length=200)
     current_date = models.CharField(max_length=200)
     booking_time = models.CharField(max_length=200, default="")
-    # Change ArrayField to TextField and use a method to handle lists
-    slots = models.TextField(default="")
-
-    def get_slots_list(self):
-        return self.slots.split(',') if self.slots else []
+    slots = models.JSONField()  # Replacing ArrayField with JSONField
     
-    payment_id = models.CharField(max_length=100)
-    paid = models.BooleanField(default=False)
+    def __str__(self):
+        return self.name
+
