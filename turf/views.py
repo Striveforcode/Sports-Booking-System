@@ -1,3 +1,6 @@
+
+from datetime import datetime, timedelta
+from .models import bookslot
 from django.shortcuts import render
 
 from django.shortcuts import render, redirect, HttpResponse
@@ -18,36 +21,31 @@ import time
 import razorpay
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import send_mail
-from django.http import Http404
-from django.shortcuts import render
-from datetime import datetime, timedelta
-from turf.models import TurfBooking, BookSlot
-
 
 
 def index(request):
 
-    # days=[
-    # [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    # [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    # [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    # [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    # [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    # [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    # [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    # days = [
+    #     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    #     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    #     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    #     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    #     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    #     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    #     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     # ]
-    # matrix = bookslot(week = days)
+    # matrix = bookslot(week=days)
     # matrix.save()
     if request.user.is_authenticated:
         username = request.user.username
-        return render(request, 'mainpage_index.html', {'username':username})
+        return render(request, 'mainpage_index.html', {'username': username})
     return render(request, 'mainpage_index.html')
 
 
 def book_now(request):
     if request.user.is_authenticated:
         username = request.user.username
-        return render(request, 'booking_index.html', {'username':username})
+        return render(request, 'booking_index.html', {'username': username})
     return render(request, 'booking_index.html')
 
 
@@ -86,11 +84,13 @@ def signup(request):
             messages.info(request, 'Email is already Taken')
             return redirect('signup')
         else:
-            user = User.objects.create_user(username=username, password=password, email=email)
+            user = User.objects.create_user(
+                username=username, password=password, email=email)
             user.save()
             return redirect('login')
     else:
         return render(request, 'signUp.html')
+
 
 def logout(request):
     auth.logout(request)
@@ -100,263 +100,209 @@ def logout(request):
 def contactus(request):
     return render(request, 'contactUs.html')
 
+
 def aboutus(request):
     return render(request, 'aboutus.html')
+
+
+def booking(request, id):
+    if request.method == 'POST':
+        username = request.POST['username']
+        lastName = request.POST['lastName']
+        fromCity = request.POST['fromCity']
+        toCity = request.POST['toCity']
+        depatureDate = request.POST['depatureDate']
+        days = request.POST['days']
+        noOfRooms = int(request.POST['noOfRooms'])
+        noOfAdults = int(request.POST['noOfAdults'])
+        noOfChildren = int(request.POST['noOfChildren'])
+        email = request.POST['email']
+        phoneNo = request.POST['phoneNo']
+        totalAmount = int(request.POST['totalAmount'])
+
+        request.session['fname'] = username
+        request.session['lname'] = lastName
+        request.session['to_city'] = toCity
+        request.session['from_city'] = fromCity
+        request.session['depature_date'] = depatureDate
+        request.session['arrival_date'] = days
+        request.session['no_of_rooms'] = noOfRooms
+        request.session['no_of_adults'] = noOfAdults
+        request.session['no_of_children'] = noOfChildren
+        request.session['email'] = email
+        request.session['phone_no'] = phoneNo
+        request.session['total_amount'] = totalAmount
+
+        requiredRooms = 1
+        if noOfAdults/3 > 1:
+            requiredRooms = math.ceil(noOfAdults/3)
+
+        if noOfRooms < requiredRooms:
+            noOfRooms = requiredRooms - noOfRooms
+            messages.info(
+                request, 'For adding more travellers, Please add' + str(noOfRooms) + ' more rooms')
+            return redirect('booking', id)
+
+        if noOfRooms > noOfAdults:
+            messages.info(request, 'Minimum 1 Adult is required per Room')
+            return redirect('booking', id)
+
+        if (noOfAdults + noOfChildren)/4 > 1:
+            requiredRooms = math.ceil((noOfAdults + noOfChildren)/4)
+
+        if noOfRooms < requiredRooms:
+            noOfRooms = requiredRooms - noOfRooms
+            messages.info(
+                request, 'For adding more travellers, Please add' + str(noOfRooms) + 'more rooms')
+            return redirect('booking', id)
+
+        noOfRooms = requiredRooms
+        request.session['no_of_rooms'] = noOfRooms
+        print("No of rooms = ", noOfRooms)
+        print("Working")
+        return redirect('receipt')
+    else:
+        return render(request, 'booking.html')
+
+
+@login_required(login_url='/accounts/login')
+def receipt(request):
+    first_name = request.session.get('fname')
+    print(first_name)
+    last_name = request.session.get('lname')
+    print(last_name)
+
+    tour_amount = int(request.session.get('total_amount'))  # Per person
+    print(tour_amount)
+    adults = int(request.session.get('no_of_adults'))
+    print(adults)
+    rooms = int(request.session.get('no_of_rooms'))
+    print(rooms)
+    children = int(request.session.get('no_of_children'))
+    print(adults)
+    if rooms > 1:
+        totalCost = tour_amount*adults + tour_amount*children/2 + rooms*tour_amount/4
+    else:
+
+        totalCost = tour_amount*adults + tour_amount*children/2
+
+    request.session['total_amount'] = str(totalCost)
+    print("Hello")
+
+    print(totalCost)
+    request.session['total_amount'] = tour_amount
+
+    today = date.today()
+
+    t = time.localtime()
+    currentTime = time.strftime("%H:%M:%S", t)
+    return render(request, 'receipt.html', {'totalCost': totalCost, 'date': today, 'currentTime': currentTime})
+
+
+def search(request):
+
+    # dests = Destination.objects.all()
+    query = request.GET['query']
+    budget = request.GET['budget']
+   
+    print(query)
     
-# def booking(request, id):
-#     if request.method == 'POST':
-#         username = request.POST['username']
-#         lastName = request.POST['lastName']
-#         fromCity = request.POST['fromCity']
-#         toCity = request.POST['toCity']
-#         depatureDate = request.POST['depatureDate']
-#         days = request.POST['days']
-#         noOfRooms = int(request.POST['noOfRooms'])
-#         noOfAdults = int(request.POST['noOfAdults'])
-#         noOfChildren = int(request.POST['noOfChildren'])
-#         email = request.POST['email']
-#         phoneNo = request.POST['phoneNo']
-#         totalAmount = int(request.POST['totalAmount'])
-
-#         request.session['fname'] = username
-#         request.session['lname'] = lastName
-#         request.session['to_city'] = toCity
-#         request.session['from_city'] = fromCity
-#         request.session['depature_date'] = depatureDate
-#         request.session['arrival_date'] = days
-#         request.session['no_of_rooms'] = noOfRooms
-#         request.session['no_of_adults'] = noOfAdults
-#         request.session['no_of_children'] = noOfChildren
-#         request.session['email'] = email
-#         request.session['phone_no'] = phoneNo
-#         request.session['total_amount'] = totalAmount
-
-#         requiredRooms = 1
-#         if noOfAdults/3 > 1:
-#             requiredRooms = math.ceil(noOfAdults/3)
-
-#         if noOfRooms < requiredRooms:
-#             noOfRooms = requiredRooms - noOfRooms
-#             messages.info(
-#                 request, 'For adding more travellers, Please add' + str(noOfRooms) + ' more rooms')
-#             return redirect('booking', id)
-
-#         if noOfRooms > noOfAdults:
-#             messages.info(request, 'Minimum 1 Adult is required per Room')
-#             return redirect('booking', id)
-
-#         if (noOfAdults + noOfChildren)/4 > 1:
-#             requiredRooms = math.ceil((noOfAdults + noOfChildren)/4)
-
-#         if noOfRooms < requiredRooms:
-#             noOfRooms = requiredRooms - noOfRooms
-#             messages.info(
-#                 request, 'For adding more travellers, Please add' + str(noOfRooms) + 'more rooms')
-#             return redirect('booking', id)
-
-#         noOfRooms = requiredRooms
-#         request.session['no_of_rooms'] = noOfRooms
-#         print("No of rooms = ", noOfRooms)
-#         print("Working")
-#         return redirect('receipt')
-#     else:
-#         return render(request, 'booking.html')
 
 
-# @login_required(login_url='/accounts/login')
-# def receipt(request):
-    # first_name = request.session.get('fname')
-    # print(first_name)
-    # last_name = request.session.get('lname')
-    # print(last_name)
-
-    # tour_amount = int(request.session.get('total_amount'))  # Per person
-    # print(tour_amount)
-    # adults = int(request.session.get('no_of_adults'))
-    # print(adults)
-    # rooms = int(request.session.get('no_of_rooms'))
-    # print(rooms)
-    # children = int(request.session.get('no_of_children'))
-    # print(adults)
-    # if rooms > 1:
-    #     totalCost = tour_amount*adults + tour_amount*children/2 + rooms*tour_amount/4
-    # else:
-
-    #     totalCost = tour_amount*adults + tour_amount*children/2
-
-    # request.session['total_amount'] = str(totalCost)
-    # print("Hello")
-
-    # print(totalCost)
-    # request.session['total_amount'] = tour_amount
-
-    # today = date.today()
-
-    # t = time.localtime()
-    # currentTime = time.strftime("%H:%M:%S", t)
-    # return render(request, 'receipt.html', {'totalCost': totalCost, 'date': today, 'currentTime': currentTime})
-
-
-# def search(request):
-
-    # # dests = Destination.objects.all()
-    # query = request.GET['query']
-    # # budget = request.GET['budget']
-    # price = Destination.objects.all()
-    # # print(price.price)
-    # print(query)
-    # # print("Price = ", budget)
-    # dests = Destination.objects.filter(name__icontains=query)
-    # print(dests)
-    # # print(dests)
-
-    # return render(request, 'search.html', {'dests': dests, 'query': query})
-    # # return HttpResponse('This is search')
-
-
-# def confirm_booking(request):
-    # if request.method == 'POST':
-    #     fullName = request.POST['fullName']
-    #     fromCity = request.POST['fromCity']
-    #     toCity = request.POST['toCity']
-    #     depatureDate = request.POST['depatureDate']
-    #     arrivalDate = request.POST['days']
-    #     noOfRooms = int(request.POST['noOfRooms'])
-    #     noOfAdults = int(request.POST['noOfAdults'])
-    #     noOfChildren = int(request.POST['noOfChildren'])
-    #     email = request.POST['email']
-    #     phoneNo = request.POST['phoneNo']
-    #     amountPerPerson = request.POST['amountPerPerson']
-    #     totalAmount = float(request.POST['totalAmount'])
-    #     userName = request.user.username
-
-    #     books = ConfirmBooking(fullName=fullName, fromCity=fromCity, toCity=toCity,
-    #                            depatureDate=depatureDate, days=arrivalDate, noOfRooms=noOfRooms, noOfAdults=noOfAdults,
-    #                            noOfChildren=noOfChildren, email=email, phoneNo=phoneNo, amountPerPerson=amountPerPerson,
-    #                            totalAmount=totalAmount, userName=userName)
-    #     books.save()
-
-    #     message = render_to_string('order_placed_body.html', {'fullName': fullName, 'fromCity': fromCity, 'toCity': toCity, 'depatureDate': depatureDate, 'arrivalDate': arrivalDate,
-    #                                'noOfRooms': noOfRooms, 'noOfAdults': noOfAdults, 'noOfChildren': noOfChildren, 'email': email, 'phoneNo': phoneNo, 'amountPerPerson': amountPerPerson, 'totalAmount': totalAmount})
-    #     msg = EmailMessage(
-    #         'Tripology',
-    #         message,
-    #         settings.EMAIL_HOST_USER,
-    #         [request.user.email]
-    #     )
-    #     msg.content_subtype = "html"  # Main content is now text/html
-    #     msg.send()
-
-    #     print("Mail successfully sent")
-
-    #     print("User Added")
-
-    #     return redirect('/')
-    # else:
-    #     return render(request, 'booking.html')
 
 
 
 update = {"1"}
 
-@login_required(login_url='login')
-@login_required(login_url='login')
+
 @login_required(login_url='login')
 def slot_details(request):
     if request.method == 'POST':
-        selectedDate = request.POST.get('selectedDate')
-        if not selectedDate:
-            return render(request, 'turfBooking.html', {'error': 'No date selected.'})
+        selectedDate = request.POST['selectedDate']
+        # Print the selected date for debugging
+        print("Selected Date: ", selectedDate)
 
-    else:
-        return render(request, 'turfBooking.html', {'error': 'Invalid request method.'})
+    # Check if there is already an instance of bookslot
+    try:
+        matrix = bookslot.objects.get(id='1')  # Fetch existing instance
+        # Debugging fetched matrix
+        print("Matrix fetched from DB: ", matrix.week)
+        # Access slots for a particular day (e.g., Monday)
+        monday_slots = matrix.week[0]
+        print(monday_slots)  # Output: [0, 1, 0, ..., 1]
+    except bookslot.DoesNotExist:
+        # Initialize if not exists
+        days = [[0]*20 for _ in range(7)]  # Create a 7x20 matrix
+        matrix = bookslot(week=days)  # Ensure the week attribute is set
+        matrix.save()
+        # Debugging initialized matrix
+        print("Matrix initialized: ", matrix.week)
 
-    # Define a mapping for days of the week
-    day_mapping = {
+    print("Matrix Before: ", matrix.week)  # Debugging before any updates
+
+    choosenDay = datetime.strptime(selectedDate, "%Y-%m-%d").strftime("%A")
+    currentDate = datetime.now().strftime("%Y-%m-%d")
+    print("Chosen Day: ", choosenDay)  # Print the chosen day for debugging
+
+    # Remove data for the previous day if necessary
+    # if currentDate in update:
+    #     dayTobeDeleted = (datetime.now() - timedelta(days=1)).strftime("%A")
+    #     update.remove(currentDate)
+    #     print("Day to be deleted: ", dayTobeDeleted)
+
+    #     day_index = {
+    #         "Monday": 0,
+    #         "Tuesday": 1,
+    #         "Wednesday": 2,
+    #         "Thursday": 3,
+    #         "Friday": 4,
+    #         "Saturday": 5,
+    #         "Sunday": 6
+    #     }.get(dayTobeDeleted, None)
+
+    #     if day_index is not None:
+    #         # Reset the slots for the previous day
+    #         matrix.week[day_index] = [0] * 20
+    #         # Print the reset day slots
+    #         print(
+    #             f"Resetting slots for {dayTobeDeleted}: ", matrix.week[day_index])
+
+    # Ensure the current day is in the array
+    day_index = {
         "Monday": 0,
         "Tuesday": 1,
         "Wednesday": 2,
         "Thursday": 3,
         "Friday": 4,
         "Saturday": 5,
-        "Sunday": 6,
-    }
+        "Sunday": 6
+    }.get(choosenDay)
 
-    # Get BookSlot instance (make sure an instance with id=1 exists)
-    try:
-        matrix = BookSlot.objects.get(id=1)
-    except BookSlot.DoesNotExist:
-        return render(request, 'turfBooking.html', {'error': 'No BookSlot entry found.'})
+    # Debugging chosen day's index
+    print("Day Index for Chosen Day: ", day_index)
 
-    print("Matrix Before")
-    print(matrix.week)
-
-    choosenDay = datetime.strptime(selectedDate, "%Y-%m-%d").strftime("%A")
-    currentTime = datetime.now().strftime("%H:%M:%S")
-
-    tomorrowDate = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-    currentDate = datetime.now().strftime("%Y-%m-%d")
-
-    # Update logic remains the same
-    update = set()  
-    update.add(tomorrowDate)
-
-    if currentDate in update:
-        dayTobeDeleated = (datetime.now() - timedelta(days=1)).strftime("%A")
-        update.remove(currentDate)
-
-        # Clear the previous day slots based on the day mapping
-        day_index = day_mapping.get(dayTobeDeleated)
-        if day_index is not None and len(matrix.week) > day_index:
-            for i in range(1, 20):
-                if len(matrix.week[day_index]) > i:
-                    matrix.week[day_index][i] = 0
-
-    ls = []
-    # Fetch the appropriate day list
-    day_index = day_mapping.get(choosenDay)
     if day_index is not None:
-        if len(matrix.week) > day_index:
-            for j in range(20):
-                if len(matrix.week[day_index]) > j:
-                    ls.append(str(matrix.week[day_index][j]))
-        else:
-            return render(request, 'turfBooking.html', {'error': 'Invalid day index.'})
+        try:
+            # Get the slots for the chosen day
+            ls = list(map(str, matrix.week[day_index]))
+            # Print the slots for the chosen day
+            print("Slots for Chosen Day: ", ls)
+        except IndexError as e:
+            # Catch index error for debugging
+            print(f"Error accessing matrix.week at index {day_index}: {e}")
+            ls = []  # Fallback in case of an error
     else:
-        return render(request, 'turfBooking.html', {'error': 'Invalid selected day.'})
+        # Debugging when day index is None
+        print("Chosen day not found in the week index.")
+        ls = []
 
-    print("Matrix After")
-    print(matrix.week)
-
-    # Prepare data for rendering
-    time_slots = []  # This will hold the available time slots
-    for idx, slot in enumerate(ls):
-        if slot == '1':  # Assuming '1' means available slot
-            time_slots.append(f"Slot {idx + 1}: Available")  # Adjust this format as needed
-        else:
-            time_slots.append(f"Slot {idx + 1}: Not Available")
-
+    print("Matrix After: ", matrix.week)  # Debugging after updates
     return render(request, 'turfBooking.html', {
         'currentDate': currentDate,
         'selectedDate': selectedDate,
-        'time_slots': time_slots,  # Pass time slots to the template
+        'list': ls
     })
 
-
-def turf_booking(request):
-    # Assume you have logic to get the selected date
-    selected_date = request.POST.get('date', datetime.now().date())
-
-    # Create a list of available time slots
-    time_slots = list(range(1, 20))  # This creates a list [1, 2, ..., 19]
-
-    context = {
-        'selectedDate': selected_date,
-        'time_slots': time_slots,
-        'list': list_available_slots(selected_date),  # Adjust this function as needed
-    }
-
-    return render(request, 'turfBooking.html', context)
 
 def turfDateSelection(request):
 
@@ -376,11 +322,10 @@ def turfBilling(request):
         currentDate = date.today().strftime("%Y-%m-%d")
         selectedDate = request.POST['date']
         list_of_input_ids = request.POST.getlist('id')
-        print(list_of_input_ids)
 
-        selectedTime = []
-        # checkingTime = []
         bookedSlots = []
+        selectedTime = []
+
         for i in list_of_input_ids:
             if i == '1':
                 bookedSlots.append('6-7 am')
@@ -440,10 +385,23 @@ def turfBilling(request):
                 bookedSlots.append('12-1 am')
                 selectedTime.append(':00:00')
 
-        print("BookedSlots :")
-        print(bookedSlots)
         totalAmount = len(bookedSlots) * 700
+        booking_time = datetime.now(
+            timezone("Asia/Kolkata")).strftime('%H:%M:%S')
 
+        # Save booking details directly without Razorpay
+        turf = TurfBooked(
+            name=request.user.username,
+            email=request.user.email,
+            amount=totalAmount,
+            selected_date=selectedDate,
+            current_date=currentDate,
+            booking_time=booking_time,
+            slots=bookedSlots,
+        )
+        turf.save()
+
+        # Prepare booking details for confirmation display
         details = {
             'username': request.user.username,
             'email': request.user.email,
@@ -451,71 +409,17 @@ def turfBilling(request):
             'currentDate': currentDate,
             'bookedSlots': bookedSlots,
             'totalAmount': totalAmount,
-            'list_of_input_ids': list_of_input_ids
+            'list_of_input_ids': list_of_input_ids,
         }
-        print("Turf Billing")
-        print("Matrix in Billing")
-        
-        booking_time = datetime.now(timezone("Asia/Kolkata")).strftime('%H:%M:%S')
-        keyId = 'rzp_test_9e8xrjzBFp5O7M'
-        keySecret = 's4qIuVEiSi128ucHK9uAzoAU'
+        payment_id = 1
+        return render(request, 'turfBilling.html', {'payment': payment_id, 'details': details})
 
-        client = razorpay.Client(auth=(keyId, keySecret))
+    return render(request, 'turfBilling.html', {'details': details})
 
-        DATA = {
-            # Amount will be in its smallest unit, that is Paisa (Therefore multiplying by 100 to convert amount in Rs to Paisa)
-            "amount": int(totalAmount)* 100,
-            "currency": "INR",
-            "receipt": 'surftheturf',
-            'notes': {
-                'Name': request.user.username,
-                'Payment_For': 'Turf Booking'
-            },
-            'payment_capture': '1'
-        }
-
-        payment = client.order.create(data=DATA)
-        print(payment)
-        turf = TurfBooked(name=request.user.username, email=request.user.email,
-                           amount=totalAmount, selected_date=selectedDate,current_date=currentDate, booking_time=booking_time,slots=bookedSlots, payment_id=payment['id'])
-        turf.save()
-        return render(request, 'turfBilling.html', {'payment': payment, 'details': details})
-    # return render(request, 'turfBilling.html', {'details': details})
 
 @csrf_exempt
 def success(request):
     if request.method == "POST":
-        paymentDetails = request.POST   # Dictionary
-        # {
-        #     "razorpay_payment_id": "pay_29QQoUBi66xm2f",
-        #     "razorpay_order_id": "order_9A33XWu170gUtm",
-        #     "razorpay_signature": "9ef4dffbfd84f1318f6739a3ce19f9d85851857ae648f114332d8401e0949a3d"
-        # }
-
-        # Verify the Signature
-
-        keyId = 'rzp_test_9e8xrjzBFp5O7M'
-        keySecret = 's4qIuVEiSi128ucHK9uAzoAU'
-        client = razorpay.Client(auth=(keyId, keySecret))
-        params_dict = {
-            'razorpay_order_id': paymentDetails['razorpay_order_id'],
-            'razorpay_payment_id': paymentDetails['razorpay_payment_id'],
-            'razorpay_signature': paymentDetails['razorpay_signature']
-        }
-        # If returns None, payment is successful, else some error occured
-        check = client.utility.verify_payment_signature(params_dict)
-        print(check)
-
-        if check:
-            return render(request, 'error.html')
-
-        # If Payment is successfull done, the checkbox(Paid) is ticked in database of that user
-        order_id = paymentDetails['razorpay_order_id']
-        user = TurfBooked.objects.filter(payment_id=order_id).first()
-        print(user)
-        user.paid = True
-        user.save()
-
         total_amount = request.POST.get('total_amount')
         username = request.POST.get('username')
         email = request.POST.get('email')
@@ -525,116 +429,105 @@ def success(request):
         print(slots)
         booking_time = datetime.now(
             timezone("Asia/Kolkata")).strftime('%H:%M:%S')
-        
-        # bookedSlots = []
-        # for i in slots:
-        #     if i == '6-7 am':
-        #         bookedSlots.append(1)
-        #     elif i == '7-8 am':
-        #         bookedSlots.append(2)
-        #     elif i == '8-9 am':
-        #         bookedSlots.append(3)
-        #     elif i == '9-10 am':
-        #         bookedSlots.append(4)
-        #     elif i == '10-11 am':
-        #         bookedSlots.append(5)
-        #     elif i == '11-12 am':
-        #         bookedSlots.append(6)
-        #     elif i == '12-1 pm':
-        #         bookedSlots.append(7)
-        #     elif i == '1-2 pm':
-        #         bookedSlots.append(8)
-        #     elif i == '2-3 pm':
-        #         bookedSlots.append(9)
-        #     elif i == '3-4 pm':
-        #         bookedSlots.append(10)
-        #     elif i == '4-5 pm':
-        #         bookedSlots.append(11)
-        #     elif i == '5-6 pm':
-        #         bookedSlots.append(12)
-        #     elif i == '6-7 pm':
-        #         bookedSlots.append(13)
-        #     elif i == '7-8 pm':
-        #         bookedSlots.append(14)
-        #     elif i == '8-9 pm':
-        #         bookedSlots.append(15)
-        #     elif i == '9-10 pm':
-        #         bookedSlots.append(16)
-        #     elif i == '10-11 pm':
-        #         bookedSlots.append(17)
-        #     elif i == '11-12 pm':
-        #         bookedSlots.append(18)
-        #     elif i == '12-1 am':
-        #         bookedSlots.append(19)
 
-        # choosenDay = datetime.strptime(
-        #     selected_date, "%Y-%m-%d").strftime("%A")
-        # print(choosenDay)
-        # matrix = bookslot.objects.get(id='1')
-        # if choosenDay == "Monday":
-        #     for i in bookedSlots:
-        #         for j in range(1, 20):
-        #             if(int(i) == j):
-        #                 matrix.week[0][int(i)] = 1
-        #                 matrix.save()
-        # elif choosenDay == "Tuesday":
-        #     for i in bookedSlots:
-        #         for j in range(1, 20):
-        #             if(int(i) == j):
-        #                 matrix.week[1][int(i)] = 1
-        #                 matrix.save()
-        # elif choosenDay == "Wednesday":
-        #     for i in bookedSlots:
-        #         for j in range(1, 20):
-        #             if(int(i) == j):
-        #                 matrix.week[2][int(i)] = 1
-        #                 matrix.save()
-        # elif choosenDay == "Thursday":
-        #     for i in bookedSlots:
-        #         for j in range(1, 20):
-        #             if(int(i) == j):
-        #                 matrix.week[3][int(i)] = 1
-        #                 matrix.save()
-        # elif choosenDay == "Friday":
-        #     for i in bookedSlots:
-        #         for j in range(1, 20):
-        #             if(int(i) == j):
-        #                 matrix.week[4][int(i)] = 1
-        #                 matrix.save()
-        # elif choosenDay == "Saturday":
-        #     for i in bookedSlots:
-        #         for j in range(1, 20):
-        #             if(int(i) == j):
-        #                 matrix.week[5][int(i)] = 1
-        #                 matrix.save()
-        # elif choosenDay == "Sunday":
-        #     for i in bookedSlots:
-        #         for j in range(1, 20):
-        #             if(int(i) == j):
-        #                 matrix.week[6][int(i)] = 1
-        #                 matrix.save()
+        bookedSlots = []
+        for i in slots:
+            if i == '6-7 am':
+                bookedSlots.append(1)
+            elif i == '7-8 am':
+                bookedSlots.append(2)
+            elif i == '8-9 am':
+                bookedSlots.append(3)
+            elif i == '9-10 am':
+                bookedSlots.append(4)
+            elif i == '10-11 am':
+                bookedSlots.append(5)
+            elif i == '11-12 am':
+                bookedSlots.append(6)
+            elif i == '12-1 pm':
+                bookedSlots.append(7)
+            elif i == '1-2 pm':
+                bookedSlots.append(8)
+            elif i == '2-3 pm':
+                bookedSlots.append(9)
+            elif i == '3-4 pm':
+                bookedSlots.append(10)
+            elif i == '4-5 pm':
+                bookedSlots.append(11)
+            elif i == '5-6 pm':
+                bookedSlots.append(12)
+            elif i == '6-7 pm':
+                bookedSlots.append(13)
+            elif i == '7-8 pm':
+                bookedSlots.append(14)
+            elif i == '8-9 pm':
+                bookedSlots.append(15)
+            elif i == '9-10 pm':
+                bookedSlots.append(16)
+            elif i == '10-11 pm':
+                bookedSlots.append(17)
+            elif i == '11-12 pm':
+                bookedSlots.append(18)
+            elif i == '12-1 am':
+                bookedSlots.append(19)
+
+        choosenDay = datetime.strptime(
+            selected_date, "%Y-%m-%d").strftime("%A")
+        print(choosenDay)
+        matrix = bookslot.objects.get(id='1')
+        if choosenDay == "Monday":
+            for i in bookedSlots:
+                for j in range(1, 20):
+                    if (int(i) == j):
+                        matrix.week[0][int(i)] = 1
+                        matrix.save()
+        elif choosenDay == "Tuesday":
+            for i in bookedSlots:
+                for j in range(1, 20):
+                    if (int(i) == j):
+                        matrix.week[1][int(i)] = 1
+                        matrix.save()
+        elif choosenDay == "Wednesday":
+            for i in bookedSlots:
+                for j in range(1, 20):
+                    if (int(i) == j):
+                        matrix.week[2][int(i)] = 1
+                        matrix.save()
+        elif choosenDay == "Thursday":
+            for i in bookedSlots:
+                for j in range(1, 20):
+                    if (int(i) == j):
+                        matrix.week[3][int(i)] = 1
+                        matrix.save()
+        elif choosenDay == "Friday":
+            for i in bookedSlots:
+                for j in range(1, 20):
+                    if (int(i) == j):
+                        matrix.week[4][int(i)] = 1
+                        matrix.save()
+        elif choosenDay == "Saturday":
+            for i in bookedSlots:
+                for j in range(1, 20):
+                    if (int(i) == j):
+                        matrix.week[5][int(i)] = 1
+                        matrix.save()
+        elif choosenDay == "Sunday":
+            for i in bookedSlots:
+                for j in range(1, 20):
+                    if (int(i) == j):
+                        matrix.week[6][int(i)] = 1
+                        matrix.save()
         # book.save()
 
+        return redirect('book_now')
 
-        # return redirect('book_now')
-
-        # Sending Email
-        message_plain = render_to_string('email.txt')
-        message_html = render_to_string('email.html', {'amount': user.amount})
-
-        send_mail(
-            'Turf Booking Successful',
-            message_plain,
-            settings.EMAIL_HOST_USER,
-            [user.email],
-            html_message=message_html
-        )
+        
 
     return render(request, 'success.html')
 
 
 def deleteRecord(dayTobeDeleated):
-    matrix = BookSlot.objects.get(id='1')
+    matrix = bookslot.objects.get(id='1')
     if dayTobeDeleated == "Monday":
         for i in range(20):
             matrix.week[0][i] = 0
@@ -658,93 +551,57 @@ def deleteRecord(dayTobeDeleated):
             matrix.week[6][i] = 0
 
 
-# def Booked(request):
-#     if request.method == 'POST':
-        # total_amount = request.POST.get('total_amount')
-        # username = request.POST.get('username')
-        # email = request.POST.get('email')
-        # selected_date = request.POST.get('selected_date')
-        # current_date = request.POST.get('current_date')
-        # slots = request.POST.getlist('slots')
-        # print(slots)
-        # booking_time = datetime.now(
-        #     timezone("Asia/Kolkata")).strftime('%H:%M:%S')
-        # print(username)
-        # keyId = 'rzp_test_9e8xrjzBFp5O7M'
-        # keySecret = 's4qIuVEiSi128ucHK9uAzoAU'
 
-        # client = razorpay.Client(auth=(keyId, keySecret))
-
-        # DATA = {
-        #     # Amount will be in its smallest unit, that is Paisa (Therefore multiplying by 100 to convert amount in Rs to Paisa)
-        #     "amount": int(total_amount)* 100,
-        #     "currency": "INR",
-        #     "receipt": 'surftheturf',
-        #     'notes': {
-        #         'Name': request.user.username,
-        #         'Payment_For': 'Turf Booking'
-        #     },
-        #     'payment_capture': '1'
-        # }
-
-        # payment = client.order.create(data=DATA)
-        # print(payment)
-        # turf = TurfBooked(name=username, email=email,
-        #                    amount=total_amount, selected_date=selected_date,current_date=current_date, booking_time=booking_time,slots=slots, payment_id=payment['id'])
-        # turf.save()
-        # return render(request, 'turfBilling.html', {'payment': payment})
-
-        # book = TurfBooked(name=username, email=email, amount=total_amount, selected_date=selected_date,
-        #                   current_date=current_date, booking_time=booking_time, slots=slots)
-
-        
 
 
 @login_required(login_url='login')
 def orderHistory(request):
-
-    # bookings = TurfBooked.objects.filter(paid=True)
-    my_bookings = TurfBooked.objects.filter(paid=True).filter(email=request.user.email)
-    # bookedSlots = []
-    # for i in bookings.slots:
-    #     if i == '1':
-    #         bookedSlots.append('6-7 am')
-    #     elif i == '2':
-    #             bookedSlots.append('7-8 am')
-    #     elif i == '3':
-    #         bookedSlots.append('8-9 am')
-    #     elif i == '4':
-    #         bookedSlots.append('9-10 am')
-    #     elif i == '5':
-    #         bookedSlots.append('10-11 am')
-    #     elif i == '6':
-    #             bookedSlots.append('11-12 am')
-    #     elif i == '7':
-    #         bookedSlots.append('12-1 pm')
-    #     elif i == '8':
-    #         bookedSlots.append('1-2 pm')
-    #     elif i == '9':
-    #         bookedSlots.append('2-3 pm')
-    #     elif i == '10':
-    #         bookedSlots.append('3-4 pm')
-    #     elif i == '11':
-    #          bookedSlots.append('4-5 pm')
-    #     elif i == '12':
-    #         bookedSlots.append('5-6 pm')
-    #     elif i == '13':
-    #         bookedSlots.append('6-7 pm')
-    #     elif i == '14':
-    #         bookedSlots.append('7-8 pm')
-    #     elif i == '15':
-    #         bookedSlots.append('8-9 pm')
-    #     elif i == '16':
-    #         bookedSlots.append('9-10 pm')
-    #     elif i == '17':
-    #         bookedSlots.append('10-11 pm')
-    #     elif i == '18':
-    #         bookedSlots.append('11-12 pm')
-    #     elif i == '19':
-    #         bookedSlots.append('12-1 am')
+    
+    # Fetch all bookings
+    bookings = TurfBooked.objects.all()
+    # Fetch bookings for the logged-in user based on email
+    my_bookings = TurfBooked.objects.filter(email=request.user.email)
+    bookedSlots = []
+    for booking in my_bookings:
+        for i in booking.slots:
+            if i == '1':
+                bookedSlots.append('6-7 am')
+            elif i == '2':
+                bookedSlots.append('7-8 am')
+            elif i == '3':
+                bookedSlots.append('8-9 am')
+            elif i == '4':
+                bookedSlots.append('9-10 am')
+            elif i == '5':
+                bookedSlots.append('10-11 am')
+            elif i == '6':
+                bookedSlots.append('11-12 am')
+            elif i == '7':
+                bookedSlots.append('12-1 pm')
+            elif i == '8':
+                bookedSlots.append('1-2 pm')
+            elif i == '9':
+                bookedSlots.append('2-3 pm')
+            elif i == '10':
+                bookedSlots.append('3-4 pm')
+            elif i == '11':
+                bookedSlots.append('4-5 pm')
+            elif i == '12':
+                bookedSlots.append('5-6 pm')
+            elif i == '13':
+                bookedSlots.append('6-7 pm')
+            elif i == '14':
+                bookedSlots.append('7-8 pm')
+            elif i == '15':
+                bookedSlots.append('8-9 pm')
+            elif i == '16':
+                bookedSlots.append('9-10 pm')
+            elif i == '17':
+                bookedSlots.append('10-11 pm')
+            elif i == '18':
+                bookedSlots.append('11-12 pm')
+            elif i == '19':
+                bookedSlots.append('12-1 am')
 
     currentDate = date.today().strftime("%Y-%m-%d")
     # currentDate = '2021-08-18'
@@ -802,47 +659,47 @@ def delete_booking(request, id):
 
         choosenDay = datetime.strptime(selectedDate, "%Y-%m-%d").strftime("%A")
         print(choosenDay)
-        matrix = BookSlot.objects.get(id='1')
+        matrix = bookslot.objects.get(id='1')
         if choosenDay == "Monday":
             for i in bookedSlots:
                 for j in range(1, 20):
-                    if(i == j):
+                    if (i == j):
                         matrix.week[0][i] = 0
                         matrix.save()
         elif choosenDay == "Tuesday":
             for i in bookedSlots:
                 for j in range(1, 20):
-                    if(i == j):
+                    if (i == j):
                         matrix.week[1][i] = 0
                         matrix.save()
         elif choosenDay == "Wednesday":
             for i in bookedSlots:
                 for j in range(1, 20):
-                    if(i == j):
+                    if (i == j):
                         matrix.week[2][i] = 0
                         matrix.save()
         elif choosenDay == "Thursday":
             for i in bookedSlots:
                 for j in range(1, 20):
-                    if(i == j):
+                    if (i == j):
                         matrix.week[3][i] = 0
                         matrix.save()
         elif choosenDay == "Friday":
             for i in bookedSlots:
                 for j in range(1, 20):
-                    if(i == j):
+                    if (i == j):
                         matrix.week[4][i] = 0
                         matrix.save()
         elif choosenDay == "Saturday":
             for i in bookedSlots:
                 for j in range(1, 20):
-                    if(i == j):
+                    if (i == j):
                         matrix.week[5][i] = 0
                         matrix.save()
         elif choosenDay == "Sunday":
             for i in bookedSlots:
                 for j in range(1, 20):
-                    if(i == j):
+                    if (i == j):
                         matrix.week[6][i] = 0
                         matrix.save()
 
@@ -853,7 +710,8 @@ def delete_booking(request, id):
 
 def allBookings(request):
     datesInSortedOrder = []
-    bookings = TurfBooked.objects.filter(paid = True).order_by('selected_date', 'booking_time')
+    bookings = TurfBooked.objects.filter(
+        paid=True).order_by('selected_date', 'booking_time')
     currentDate = date.today().strftime("%Y-%m-%d")
     # currentDate = '2021-08-19'
     return render(request, 'allBookings.html', {'bookings': bookings, 'dates': datesInSortedOrder, 'currentDate': currentDate})
@@ -869,9 +727,4 @@ def searchBooking(request):
     # return HttpResponse('This is search')
 
 
-#
-# present = datetime.now()
-# dayTobeDeleated = (datetime.now() - timedelta(days=1)).strftime("%A")
-# print(dayTobeDeleated)
-#
-# schedule.every().day.at("00:00").do(deleteRecord, dayTobeDeleated)
+
